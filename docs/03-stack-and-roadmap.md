@@ -115,10 +115,27 @@ Implement `rotation.py` + `scalar_quant.py`. Quantize random unit vectors at b =
   0.03393), confirming the `O(d log d)` production path is distortion-equivalent. Covered by
   `tests/test_distortion.py` + `tests/test_rotation.py` (22 tests green).
 
-### Phase 1 — QJL unbiased estimator (synthetic)
+### Phase 1 — QJL unbiased estimator (synthetic) ✅ **DONE**
 Implement `qjl.py`. Estimate `⟨q, x⟩` for random vectors.
 - **DoD:** estimate is **unbiased** (mean error ≈ 0 over many seeds, a `hypothesis` property
   test) and variance shrinks as `m` grows like the theory predicts.
+- **Result (reproduced, d=128, 4k projections — `scripts/run_phase1.py`):**
+
+  | m bits | mean est | bias | 4·SE | emp var | closed var `(π/2‖q‖²‖x‖²−⟨q,x⟩²)/m` | var·m |
+  |--------|----------|------|------|---------|--------------------------------------|-------|
+  | 16  | −6.145 | −0.040 | 2.43 | 1475 | 1449 | 23603 |
+  | 32  | −5.940 | +0.165 | 1.71 | 727  | 725  | 23276 |
+  | 64  | −5.983 | +0.122 | 1.19 | 354  | 362  | 22642 |
+  | 128 | −5.986 | +0.119 | 0.86 | 184  | 181  | 23509 |
+  | 256 | −6.168 | −0.063 | 0.61 | 92   | 91   | 23497 |
+
+  True `⟨q,x⟩ = −6.105`. Bias stays inside 4·SE at every `m` (unbiased), empirical variance
+  matches the closed form, and `var·m` is flat to **1.5%** — i.e. variance ∝ `1/m` exactly as
+  the theory predicts. The estimator is the **asymmetric** one: only the stored side is the
+  1-bit sign code `sign(Sx)`, the query stays full-precision, de-biased by `√(π/2)/m`. Covered
+  by `tests/test_unbiased.py` (10 tests, incl. a `hypothesis` property test over random `q,x`).
+  This is the standalone QJL stage; composing it onto the Stage-1 residual (`TurboQuantProd`)
+  comes when search/KV need it. **Keep QJL off by default for attention** (see `docs/02`).
 
 ### Phase 2 — Vector search (QJL's home turf)
 Build `search.py`; evaluate recall@k on GloVe (d=200) vs FAISS Product Quantization.

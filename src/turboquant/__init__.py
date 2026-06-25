@@ -19,6 +19,12 @@ from .scalar_quant import (
     unit_vector_coordinate_samples,
 )
 from .quantizers import TurboQuantMSE, QuantizedVectors
+from .qjl import (
+    QJL,
+    QJLSketch,
+    gaussian_projection,
+    qjl_estimator_variance,
+)
 from .metrics import (
     normalized_distortion,
     mean_squared_error,
@@ -40,6 +46,10 @@ __all__ = [
     "unit_vector_coordinate_samples",
     "TurboQuantMSE",
     "QuantizedVectors",
+    "QJL",
+    "QJLSketch",
+    "gaussian_projection",
+    "qjl_estimator_variance",
     "normalized_distortion",
     "mean_squared_error",
     "paper_distortion_bound",
