@@ -96,11 +96,24 @@ Design rules carried over from the community's lessons (`docs/02`):
 
 ## Phased roadmap (each phase has a "definition of done" tied to a number)
 
-### Phase 0 — Synthetic distortion (no model, no GPU needed) ✅ start here
+### Phase 0 — Synthetic distortion (no model, no GPU needed) ✅ **DONE**
 Implement `rotation.py` + `scalar_quant.py`. Quantize random unit vectors at b = 1,2,3,4 bits.
 - **DoD:** measured normalized MSE is **below the paper's upper bound** and within the ≈2.7×
   optimality factor. Target table (d=128): 3-bit MSE ≈ 0.034 (bound 0.043). This single result
   validates the entire core idea and costs minutes.
+- **Result (reproduced, d=128, 50k unit vectors — `scripts/run_phase0.py`):**
+
+  | bits | measured MSE | optimal Lloyd–Max | paper bound `2.7·2⁻²ᵇ` | meas/bound |
+  |------|--------------|-------------------|------------------------|------------|
+  | 1 | 0.3608 | 0.3634 | 0.6750 | 0.54 |
+  | 2 | 0.1160 | 0.1175 | 0.1688 | 0.69 |
+  | 3 | **0.0340** | 0.0345 | 0.0422 | 0.81 |
+  | 4 | 0.0093 | 0.0095 | 0.0105 | 0.88 |
+
+  All bit-rates land under the bound and within ≈2.7× of the `2⁻²ᵇ` floor. The fast
+  randomized-Hadamard rotation matches the dense Haar oracle to 5 decimals (0.03395 vs
+  0.03393), confirming the `O(d log d)` production path is distortion-equivalent. Covered by
+  `tests/test_distortion.py` + `tests/test_rotation.py` (22 tests green).
 
 ### Phase 1 — QJL unbiased estimator (synthetic)
 Implement `qjl.py`. Estimate `⟨q, x⟩` for random vectors.
