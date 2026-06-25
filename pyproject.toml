@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "turboquant"
+version = "0.0.1"
+description = "A from-scratch, validated replication of TurboQuant: random rotation + per-coordinate Lloyd-Max scalar quantization, with an optional QJL stage."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "André Amorim" }]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7", "hypothesis>=6"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+# Lets `pytest` import the package straight from src/ without an editable install.
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra"
