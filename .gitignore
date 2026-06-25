@@ -1,0 +1,67 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg
+*.egg-info/
+.eggs/
+
+# ---- Virtual environments ----
+.venv/
+venv/
+env/
+ENV/
+
+# ---- Testing / type checking / linting caches ----
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Claude Code local (machine-specific) settings ----
+.claude/settings.local.json
+
+# ---- Large artifacts that must never enter git ----
+# model weights / checkpoints
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+models/
+weights/
+
+# datasets and raw numeric dumps (regenerable; keep the repo light)
+data/
+datasets/
+*.npy
+*.npz
+*.hdf5
+*.h5
+
+# benchmark/run outputs and logs
+results/
+outputs/
+*.log
