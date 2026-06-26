@@ -137,10 +137,51 @@ Implement `qjl.py`. Estimate `⟨q, x⟩` for random vectors.
   This is the standalone QJL stage; composing it onto the Stage-1 residual (`TurboQuantProd`)
   comes when search/KV need it. **Keep QJL off by default for attention** (see `docs/02`).
 
-### Phase 2 — Vector search (QJL's home turf)
-Build `search.py`; evaluate recall@k on GloVe (d=200) vs FAISS Product Quantization.
-- **DoD:** at matched bit-rate, **recall@k ≥ PQ baseline** (paper claims superiority). This is
-  where QJL is *supposed* to win, so it's a clean check that our QJL is correct.
+### Phase 2 — Vector search (GloVe-200 vs FAISS PQ) ✅ **DONE (with an honest gap)**
+Build `search.py`; evaluate recall@k on GloVe-200 (the paper's own dataset) vs FAISS Product
+Quantization, every method an *exhaustive* ADC scan so we measure only quantizer quality.
+- **DoD (as written):** at matched bit-rate, **recall@k ≥ PQ baseline** (paper claims
+  superiority). **Outcome:** met only as a *tie at 4 bits with the MSE variant*; the paper's
+  headline claim (TurboQuant-**Prod** beats PQ at 2–4 bits) **does not reproduce** here. This is
+  a real, documented finding, not a bug — see below.
+- **Result (full DB, 1.18M × 200, 500 queries — `scripts/run_phase2.py`; ground truth agrees
+  1.000 with the dataset's own neighbour list):**
+
+  | bits/dim | TurboQuant-MSE R@10 | TurboQuant-Prod R@10 | FAISS PQ R@10 |
+  |----------|---------------------|----------------------|---------------|
+  | 1 | 0.335 | *(QJL-only 0.197)* | **0.378** |
+  | 2 | 0.561 | 0.341 | **0.602** |
+  | 4 | **0.844** | 0.710 | **0.844** |
+
+  **Finding 1 — TurboQuant-MSE is competitive.** Pure rotation + per-coordinate Lloyd–Max
+  *ties* learned PQ at 4 bits and trails by only ~0.04 at 1–2 bits — the expected small
+  "obliviousness tax" of scalar-vs-learned-vector quantization, paid with **zero** indexing /
+  training cost (the paper's Table-2 advantage, which is real). At low bit-rates PQ's
+  data-dependent codebooks keep a small edge; the gap closes as bits grow.
+
+  **Finding 2 — TurboQuant-Prod (the paper's stated search method: MSE at `b−1` bits + a 1-bit
+  QJL residual sketch) underperforms badly, and we explain why.** It is the *worst* method at
+  every rate. `scripts/run_phase2_prod_diagnostic.py` proves the implementation is correct —
+  Prod's recall climbs monotonically to the ceiling as QJL bits `m` grow (variance ∝ `1/m`):
+
+  | method | bits/vec | R@10 | inner-product est. RMSE |
+  |--------|----------|------|--------------------------|
+  | Stage1 `b=2` | 400 | 0.578 | 0.026 |
+  | Prod `b=1, m=200` | 400 | 0.327 | 0.053 |
+  | Prod `b=1, m=800` | 1000 | 0.598 | 0.027 |
+  | Prod `b=1, m=1600` | 1800 | 0.705 | 0.019 |
+
+  The 1-bit QJL sign sketch is **unbiased but bit-inefficient**: matching the inner-product
+  accuracy of *one extra scalar bit* (RMSE 0.026 at 400 bits) costs the QJL residual ~1000
+  bits. At the paper's matched budget (1 QJL bit/coordinate) the residual's variance swamps the
+  tiny score gaps between real GloVe neighbours and wrecks ranking. **This is the search-side
+  echo of the KV-cache lesson `MSE-only > MSE+QJL` (docs/02):** an unbiased-but-high-variance
+  inner product is the wrong tool when scores must be discriminated finely — ranking here,
+  softmax there. Why the paper reports Prod > PQ we could not recover with a standard `nbits=8`
+  PQ baseline and pure ADC recall (candidate explanations: re-ranking, a weaker PQ baseline, or
+  different bit-accounting); the honest reproduction is the table above. Covered by
+  `tests/test_search.py` (9 tests: recall metric, exact oracle, Stage-1 recall ↑ with bits, QJL
+  ≫ chance, Prod ≥ Stage-1 on well-separated synthetic data).
 
 ### Phase 3 — KV-cache attention fidelity (small HF model)
 Capture K/V tensors from a small model; compare attention scores fp16 vs compressed.
