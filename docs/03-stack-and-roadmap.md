@@ -183,10 +183,17 @@ Quantization, every method an *exhaustive* ADC scan so we measure only quantizer
   `tests/test_search.py` (9 tests: recall metric, exact oracle, Stage-1 recall ↑ with bits, QJL
   ≫ chance, Prod ≥ Stage-1 on well-separated synthetic data).
 
+  > The open questions above (ISS-01 … ISS-03, ISS-05) are tracked as numbered entries in the
+  > issues register, **`docs/06`**.
+
 ### Phase 3 — KV-cache attention fidelity (small HF model)
 Capture K/V tensors from a small model; compare attention scores fp16 vs compressed.
 - **DoD:** high attention cosine similarity at 3–4 bits — **but treat this as necessary, not
   sufficient** (see Phase 4). Confirm the **MSE-only > MSE+QJL** finding on your own setup.
+- **Environment ready (2026-06-26):** `torch 2.11.0+cu128` (CUDA verified on the RTX 3060,
+  capability sm_86, bf16 supported) and `transformers 5.12.1` installed in the venv via
+  `pip install torch --index-url https://download.pytorch.org/whl/cu128` followed by
+  `pip install transformers`. numpy 2.5.0 / faiss-cpu 1.14.3 unaffected.
 
 ### Phase 4 — End-to-end generation (the real test)
 Plug `kvcache.py` into HF `generate()`; run needle-in-a-haystack + a LongBench subset on a
