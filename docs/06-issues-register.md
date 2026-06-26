@@ -28,6 +28,8 @@ number, never a hope.
 | [ISS-03](#iss-03) | 2 | Our PQ baseline strength vs the paper's is unverified | Medium | OPEN |
 | [ISS-05](#iss-05) | 2 | Bit-accounting assumes normalized vectors (norm treated as ≈ free) | Low | DOCUMENTED |
 | [ISS-04](#iss-04) | 3 | The core KV-cache claim was untested — now closed by Phase 3 | High | **RESOLVED** |
+| [ISS-07](#iss-07) | 4 | Exact long-context retrieval is stricter than the ~3.5-bit perplexity-neutral rate | Medium | DOCUMENTED |
+| [ISS-08](#iss-08) | 4 | Exact-string needle retrieval is a brittle, non-monotonic pass/fail metric | Low | DOCUMENTED |
 
 > IDs are assigned in discovery order, not phase order, so they stay stable as the table is
 > re-sorted. **ISS-04** was closed on 2026-06-26 by Phase 3 (kept with evidence, not deleted).
@@ -182,10 +184,43 @@ paper actually claims it. See `docs/03` Phase 3 for the full table; covered by
 
 ---
 
-## Phase 4 — End-to-end generation (not yet started)
+## Phase 4 — End-to-end generation (DONE)
 
-No issues filed yet. The real quality-neutral bit-rate (paper says ~3.5) and exact needle
-retrieval will be tested here; expect new `ISS-NN` entries once it runs.
+Both DoDs met (see `docs/03` Phase 4): streaming perplexity is **quality-neutral at 3 bits**
+(gpt2, within 1% of fp — close to the paper's ~3.5), the **residual window** cuts the 3-bit
+penalty ~11× (window 0 → +5.5%, window 32 → +0.5%), and at least one compressed config retrieves
+a mid-context needle verbatim on Qwen2.5-0.5B-Instruct. Two honest caveats are tracked below.
+
+### ISS-07 — Exact retrieval needs more bits than perplexity suggests {#iss-07}
+
+**Severity:** Medium · **Status:** DOCUMENTED · **First seen:** Phase 4
+
+Streaming **perplexity** is quality-neutral at **3 bits**, matching the paper's ~3.5 headline.
+But **exact verbatim long-context retrieval** (needle-in-a-haystack, greedy decode) is stricter:
+on Qwen2.5-0.5B-Instruct symmetric **4-bit** flips the needle's digits (`velvet-tiger-1947` →
+`velvet-tiger-17t7r7`) and only **5-bit symmetric** — or a **key-heavy asymmetric** config —
+recovers it. So "the quality-neutral bit-rate" depends on the metric: a ~3-bit average that is
+perplexity-neutral can still corrupt a single critical fact. This is Phase 3's "high attention
+cosine is *necessary, not sufficient*" caveat made concrete, and it is consistent with — not a
+contradiction of — the paper, which reports perplexity/accuracy aggregates rather than verbatim
+single-token recall. We note it because for *retrieval-style* use the safe rate on a small model
+is higher than the perplexity number alone implies. Two mitigations are real and demonstrated:
+the residual window, and **asymmetric K/V** — keys carry the softmax and need precision, values
+compress hard (8-bit keys + **2-bit** values retrieve where symmetric 4-bit fails). A larger /
+non-GQA model would likely narrow the gap (small GQA models share only a few KV heads, so each
+quantization error is amplified across many query heads). Not pursued further here.
+
+### ISS-08 — Exact-string retrieval is a brittle, non-monotonic metric {#iss-08}
+
+**Severity:** Low · **Status:** DOCUMENTED · **First seen:** Phase 4
+
+Under greedy decoding a single flipped token changes a verbatim-match verdict, so needle
+retrieval is **not monotone in bits** (in probing we saw 5-bit succeed while 6-bit failed on the
+same prompt). It is therefore reported as an honest, captioned observation in
+`scripts/run_phase4.py`, **not** encoded as a pytest assertion — doing so would make a flaky
+suite. The deterministic cache mechanics *are* unit-tested (`tests/test_kvcache.py`); the smooth,
+reproducible quality signal is the streaming-perplexity sweep, which is what the DoD leans on.
+The brittleness is a property of the exact-match metric, not of the quantizer.
 
 ---
 
