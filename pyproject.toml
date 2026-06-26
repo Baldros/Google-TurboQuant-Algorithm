@@ -16,6 +16,8 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=7", "hypothesis>=6"]
+# Phase 2 vector-search scoreboard (scripts/run_phase2.py): FAISS PQ baseline + GloVe loader.
+bench = ["faiss-cpu>=1.8", "h5py>=3.10"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

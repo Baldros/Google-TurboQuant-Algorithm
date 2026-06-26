@@ -25,10 +25,17 @@ from .qjl import (
     gaussian_projection,
     qjl_estimator_variance,
 )
+from .search import (
+    Stage1Index,
+    QJLIndex,
+    TurboQuantProdIndex,
+    exact_search,
+)
 from .metrics import (
     normalized_distortion,
     mean_squared_error,
     paper_distortion_bound,
+    recall_at_k,
 )
 
 __version__ = "0.0.1"
@@ -50,8 +57,13 @@ __all__ = [
     "QJLSketch",
     "gaussian_projection",
     "qjl_estimator_variance",
+    "Stage1Index",
+    "QJLIndex",
+    "TurboQuantProdIndex",
+    "exact_search",
     "normalized_distortion",
     "mean_squared_error",
     "paper_distortion_bound",
+    "recall_at_k",
     "__version__",
 ]

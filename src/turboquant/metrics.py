@@ -38,3 +38,20 @@ def paper_distortion_bound(bits: int, factor: float = 2.7) -> float:
     paper proves the rotation + optimal scalar quantizer achieves.
     """
     return factor * 2.0 ** (-2.0 * bits)
+
+
+def recall_at_k(found: np.ndarray, truth: np.ndarray, k: int) -> float:
+    """Mean recall@k of approximate search against ground-truth neighbours.
+
+    For each query, recall@k is ``|found[:k] ∩ truth[:k]| / k`` - the fraction of the
+    true k nearest neighbours that the approximate search recovered in its own top-k.
+    Averaged over all queries. ``found`` and ``truth`` are ``(nq, >=k)`` index arrays
+    (``truth`` is typically the dataset's precomputed ground-truth neighbour list).
+    """
+    found = np.asarray(found)
+    truth = np.asarray(truth)
+    nq = found.shape[0]
+    hits = 0
+    for i in range(nq):
+        hits += np.intersect1d(found[i, :k], truth[i, :k]).size
+    return hits / (nq * k)
