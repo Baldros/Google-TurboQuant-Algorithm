@@ -40,6 +40,33 @@ def paper_distortion_bound(bits: int, factor: float = 2.7) -> float:
     return factor * 2.0 ** (-2.0 * bits)
 
 
+def cosine_similarity_rows(a: np.ndarray, b: np.ndarray, *, eps: float = 1e-12) -> float:
+    """Mean cosine similarity between corresponding last-axis vectors of ``a`` and ``b``.
+
+    Both are ``(..., d)``; cosine is taken over the last axis per row and averaged over all
+    leading positions. This is the Phase-3 attention-output fidelity: how close the
+    compressed-KV attention output is to the fp32 reference, per query position.
+    """
+    a = np.asarray(a, dtype=np.float64)
+    b = np.asarray(b, dtype=np.float64)
+    num = np.sum(a * b, axis=-1)
+    den = np.linalg.norm(a, axis=-1) * np.linalg.norm(b, axis=-1) + eps
+    return float(np.mean(num / den))
+
+
+def kl_divergence_rows(p: np.ndarray, q: np.ndarray, *, eps: float = 1e-12) -> float:
+    """Mean ``KL(p || q)`` over rows; ``p, q`` are ``(..., n)`` distributions on the last axis.
+
+    Used on attention weight rows: how much the compressed-KV softmax distribution diverges
+    from the reference. Terms with ``p == 0`` contribute nothing (the ``0 log 0`` convention),
+    so masked (future) positions are handled correctly.
+    """
+    p = np.asarray(p, dtype=np.float64)
+    q = np.asarray(q, dtype=np.float64)
+    kl = np.sum(np.where(p > 0, p * (np.log(p + eps) - np.log(q + eps)), 0.0), axis=-1)
+    return float(np.mean(kl))
+
+
 def recall_at_k(found: np.ndarray, truth: np.ndarray, k: int) -> float:
     """Mean recall@k of approximate search against ground-truth neighbours.
 

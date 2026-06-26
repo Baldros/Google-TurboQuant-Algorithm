@@ -31,11 +31,22 @@ from .search import (
     TurboQuantProdIndex,
     exact_search,
 )
+from .attention import (
+    softmax,
+    causal_additive_mask,
+    attention,
+    attention_from_scores,
+    attention_from_prescaled,
+    mse_key_scores,
+    prod_key_scores,
+)
 from .metrics import (
     normalized_distortion,
     mean_squared_error,
     paper_distortion_bound,
     recall_at_k,
+    cosine_similarity_rows,
+    kl_divergence_rows,
 )
 
 __version__ = "0.0.1"
@@ -61,9 +72,18 @@ __all__ = [
     "QJLIndex",
     "TurboQuantProdIndex",
     "exact_search",
+    "softmax",
+    "causal_additive_mask",
+    "attention",
+    "attention_from_scores",
+    "attention_from_prescaled",
+    "mse_key_scores",
+    "prod_key_scores",
     "normalized_distortion",
     "mean_squared_error",
     "paper_distortion_bound",
     "recall_at_k",
+    "cosine_similarity_rows",
+    "kl_divergence_rows",
     "__version__",
 ]

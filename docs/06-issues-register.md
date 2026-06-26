@@ -27,10 +27,10 @@ number, never a hope.
 | [ISS-02](#iss-02) | 2 | DoD met only as a *tie at 4 bit* (MSE variant); a true win never observed | Medium | DOCUMENTED |
 | [ISS-03](#iss-03) | 2 | Our PQ baseline strength vs the paper's is unverified | Medium | OPEN |
 | [ISS-05](#iss-05) | 2 | Bit-accounting assumes normalized vectors (norm treated as ≈ free) | Low | DOCUMENTED |
-| [ISS-04](#iss-04) | 3 | The **core KV-cache claim is still untested** — all results so far are synthetic + search | **High** | OPEN |
+| [ISS-04](#iss-04) | 3 | The core KV-cache claim was untested — now closed by Phase 3 | High | **RESOLVED** |
 
 > IDs are assigned in discovery order, not phase order, so they stay stable as the table is
-> re-sorted. ISS-04 was filed before Phase 3 began (it describes what Phase 3 must close).
+> re-sorted. **ISS-04** was closed on 2026-06-26 by Phase 3 (kept with evidence, not deleted).
 > **ISS-06** (GPU stack not installed) was resolved on 2026-06-26 and removed — `torch
 > 2.11.0+cu128` + `transformers 5.12.1` are installed and CUDA-verified on the RTX 3060; IDs are
 > not reused.
@@ -160,23 +160,25 @@ Already tripped over and corrected, recorded so they are not repeated:
 
 ---
 
-## Phase 3 — KV-cache attention fidelity (not yet started)
+## Phase 3 — KV-cache attention fidelity (DONE)
 
-This was filed before the phase began; it describes what Phase 3 must close. *(The GPU-stack
-prerequisite, formerly ISS-06, is resolved — see below.)*
+### ISS-04 — The core KV-cache claim is now tested {#iss-04}
 
-### ISS-04 — The core KV-cache claim is still untested {#iss-04}
+**Severity:** High · **Status:** RESOLVED (2026-06-26) · **First seen:** —
 
-**Severity:** High · **Status:** OPEN · **First seen:** —
+*Was:* everything reproduced through Phase 2 was synthetic distortion, synthetic unbiasedness, or
+vector search — the thing TurboQuant actually exists for (compressing a live LLM **KV-cache**
+without degrading attention) had not been touched. This was the highest-value gap in the project.
 
-Everything reproduced so far is **synthetic distortion** (Phase 0), **synthetic unbiasedness**
-(Phase 1), and **vector search** (Phase 2). The thing TurboQuant actually exists for — compressing
-a live LLM **KV-cache** at ~3.5 bits without degrading attention/generation — has not been touched.
-This is the highest-value gap in the whole project. Phase 3 (attention cosine fidelity on a small
-HF model) and Phase 4 (end-to-end needle-in-a-haystack) are designed to close it, and Phase 3 will
-also confirm `MSE-only > MSE+QJL` directly on attention (Phase 2 already gives independent
-search-side evidence). The GPU stack is now installed and CUDA-verified on the RTX 3060 (formerly
-ISS-06, resolved), so this phase is unblocked and awaits only authorization to start.
+*Closed by Phase 3.* On real GPT-2 K/V (144 heads × 104 tokens × 64 head-dim, extraction
+self-validated against the model's own cache to 2.9e-6), the MSE-compressed KV cache is
+near-lossless — attention-output cosine vs fp32 is **0.991** at 4 bits (0.969 at 3, 0.912 at 2),
+softmax KL **0.023** at 4 bits. **And the `MSE-only > MSE+QJL` lesson reproduces directly on
+attention:** at every bit-rate the MSE key score beats the unbiased TurboQuant-Prod key score
+(same `b·d` budget) on both cosine and KL — the search-side Phase-2 finding now confirmed where the
+paper actually claims it. See `docs/03` Phase 3 for the full table; covered by
+`tests/test_attention.py` and `scripts/run_phase3.py`. End-to-end *generation* quality (the
+"necessary, not sufficient" caveat) is Phase 4's job.
 
 ---
 

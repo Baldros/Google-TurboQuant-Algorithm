@@ -186,13 +186,39 @@ Quantization, every method an *exhaustive* ADC scan so we measure only quantizer
   > The open questions above (ISS-01 … ISS-03, ISS-05) are tracked as numbered entries in the
   > issues register, **`docs/06`**.
 
-### Phase 3 — KV-cache attention fidelity (small HF model)
-Capture K/V tensors from a small model; compare attention scores fp16 vs compressed.
-- **DoD:** high attention cosine similarity at 3–4 bits — **but treat this as necessary, not
-  sufficient** (see Phase 4). Confirm the **MSE-only > MSE+QJL** finding on your own setup.
-- **Environment ready (2026-06-26):** `torch 2.11.0+cu128` (CUDA verified on the RTX 3060,
-  capability sm_86, bf16 supported) and `transformers 5.12.1` installed in the venv via
-  `pip install torch --index-url https://download.pytorch.org/whl/cu128` followed by
+### Phase 3 — KV-cache attention fidelity (GPT-2) ✅ **DONE**
+Capture the real Q/K/V of every head and layer from GPT-2 for a passage of text, compress K and
+V with TurboQuant, recompute attention, and measure fidelity vs the fp32 reference
+(`src/turboquant/attention.py`, `scripts/run_phase3.py`, `tests/test_attention.py`).
+- **DoD:** high attention cosine similarity at 3–4 bits (necessary, not sufficient — see
+  Phase 4) **and** confirm **MSE-only > MSE+QJL** on our own setup. **Both met.**
+- **Extraction is self-validated:** recomputed keys match the model's own KV cache to **2.9e-6**
+  and our softmax matches the model's returned attention weights to **7.2e-7**, so the Q we
+  recompute (the cache does not store it) is trustworthy and the numbers below are real.
+- **Result (gpt2, 144 heads × 104 tokens × 64 head-dim; mean over all heads/positions, vs the
+  fp32 reference):**
+
+  | bits/coord | MSE cos ↑ | MSE KL ↓ | Prod cos ↑ | Prod KL ↓ |
+  |------------|-----------|----------|------------|-----------|
+  | 2 | 0.912 | 0.227 | 0.819 | 0.951 |
+  | 3 | 0.969 | 0.078 | 0.913 | 0.372 |
+  | 4 | **0.991** | 0.023 | 0.966 | 0.120 |
+
+  **Finding — `MSE-only > MSE+QJL`, confirmed directly on attention.** The compressed KV cache
+  is near-lossless at 4 bits (attention-output cosine **0.991**, softmax KL **0.023**). And at
+  *every* bit-rate the MSE key score `⟨q, k̂⟩` beats the unbiased TurboQuant-Prod key score
+  (MSE at `b−1` bits + a 1-bit QJL residual sketch, at the *same* `b·d` budget) on both
+  attention-output cosine and softmax KL. The unbiased-but-noisy QJL inner product injects
+  variance that a fidelity-sensitive softmax cannot tolerate — exactly the paper's KV lesson,
+  and the same phenomenon Phase 2 found in search ranking. Values are MSE-reconstructed
+  identically in both variants, so the gap isolates the key-score path. **QJL stays off by
+  default for attention** (`docs/02`) — now backed by our own direct evidence, closing
+  [ISS-04](06-issues-register.md). Covered by `tests/test_attention.py` (9 tests: softmax/mask/
+  attention correctness, the fidelity metrics, MSE attention → reference as bits grow, Prod
+  estimator unbiasedness).
+- **Environment used (installed 2026-06-26):** `torch 2.11.0+cu128` (CUDA verified on the RTX
+  3060, sm_86, bf16) and `transformers 5.12.1`, installed via
+  `pip install torch --index-url https://download.pytorch.org/whl/cu128` then
   `pip install transformers`. numpy 2.5.0 / faiss-cpu 1.14.3 unaffected.
 
 ### Phase 4 — End-to-end generation (the real test)
